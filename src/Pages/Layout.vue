@@ -11,6 +11,18 @@ const { selectedFiles } = defineProps<{
 }>();
 
 const pageContainer = ref<HTMLElement | null>(null);
+const finalPages = defineModel<{ portrait: boolean; pages: Page[] }>({ required: true });
+
+watch(
+  () => finalPages.value.portrait,
+  () => {
+    const rect = pageContainer.value?.querySelector('.paperContainer')?.getBoundingClientRect();
+    if (rect == null) {
+      return;
+    }
+    baseSize.value = Math.max(rect.width, rect.height);
+  }
+);
 
 const baseSize = ref<number>(1000);
 onMounted(() => {
@@ -32,7 +44,14 @@ onMounted(() => {
 const defaultFontSize = 4.5;
 
 const availableFiles = ref<DisplayFile[]>(
-  selectedFiles.map((f) => ({ ...f, fontSize: defaultFontSize }))
+  selectedFiles
+    .filter(
+      (f) =>
+        !finalPages.value.pages.some((p) =>
+          p.columns.some((c) => c.some((fc) => fc.path === f.path))
+        )
+    )
+    .map((f) => ({ ...f, fontSize: defaultFontSize }))
 );
 watch(
   () => selectedFiles,
@@ -41,8 +60,6 @@ watch(
     availableFiles.value = newValue.map((f) => ({ ...f, fontSize: defaultFontSize }));
   }
 );
-
-const finalPages = defineModel<{ portrait: boolean; pages: Page[] }>({ required: true });
 
 function addColumn(page: Page) {
   page.columns.push([]);
@@ -160,7 +177,7 @@ function deletePage(page: Page) {
             <draggable :list="column" group="files" itemKey="path" class="h-full">
               <template #item="{ element }">
                 <div
-                  class="cursor-pointer hover:bg-gray-100 transition-colors py-2 px-3 border-b pb-3 border-gray-200">
+                  class="cursor-pointer hover:bg-gray-100 transition-colors py-1 px-2 border-b pb-3 border-gray-200">
                   <MdRender
                     :name="element.name"
                     :path="element.path"

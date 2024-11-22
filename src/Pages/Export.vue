@@ -7,6 +7,8 @@ const { finalPages } = defineProps<{
   finalPages: { portrait: boolean; pages: Page[] };
 }>();
 
+const fontCorrection = 0.47;
+
 const setPageCss = (function () {
   const style = document.createElement('style');
   document.head.appendChild(style);
@@ -75,13 +77,14 @@ async function ex() {
             <div
               v-for="file in column"
               :key="file.path"
-              class="cursor-pointer hover:bg-gray-100 transition-colors py-2 px-3 border-b pb-3 border-gray-200">
+              class="cursor-pointer hover:bg-gray-100 transition-colors py-1 px-2 border-b pb-3 border-gray-200">
               <MdRender
                 :name="file.name"
                 :path="file.path"
                 :baseSize="baseSize"
                 :editing="false"
-                v-model="file.fontSize" />
+                v-model="file.fontSize"
+                :font-correction="fontCorrection" />
             </div>
           </div>
         </div>
@@ -110,6 +113,12 @@ async function ex() {
   }
   .printPage {
     border: none;
+  }
+  .border-gray-200 {
+    border-color: #aaa;
+  }
+  .markdown-body {
+    color: #000;
   }
   #app {
     height: auto;

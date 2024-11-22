@@ -6,16 +6,17 @@ import markdownit from 'markdown-it';
 import markdownItKatex from '@vscode/markdown-it-katex';
 import markdownItFrontMatter from 'markdown-it-front-matter';
 
-const { path, baseSize } = defineProps<{
+const { path, baseSize, fontCorrection } = defineProps<{
   name: string;
   path: string;
   editing: boolean;
   baseSize: number;
+  fontCorrection?: number;
 }>();
 
 const fontSize = defineModel<number>({ required: true });
 
-const baseFontSize = computed(() => baseSize / 1000);
+const baseFontSize = computed(() => (baseSize / 1000) * (fontCorrection ?? 1));
 
 const mdHtml = ref<string | null>(null);
 
@@ -38,7 +39,7 @@ readTextFile(path).then((t) => renderMd(t));
 <template>
   <div v-if="mdHtml != null" class="relative">
     <div>
-      <h1 class="font-black" :style="{ fontSize: `${baseFontSize * fontSize * 2.5}px` }">
+      <h1 class="font-black" :style="{ fontSize: `${baseFontSize * fontSize * 2.2}px` }">
         {{ name.replace(/\.md$/g, '') }}
       </h1>
       <div
@@ -51,13 +52,15 @@ readTextFile(path).then((t) => renderMd(t));
         <div class="pr-2">{{ fontSize }}px</div>
         <button
           :class="[
-            fontSize <= 0.5 ? 'text-gray-300' : 'text-indigo-600 hover:text-indigo-500',
+            fontSize <= 0.1 ? 'text-gray-300' : 'text-indigo-600 hover:text-indigo-500',
             ' w-6 h-6',
           ]"
-          @click="fontSize -= 0.5">
+          @click="fontSize > 0.1 ? (fontSize = Math.round((fontSize - 0.1) * 10) / 10) : null">
           <RemoveCircle />
         </button>
-        <button class="text-indigo-600 hover:text-indigo-500 w-6 h-6" @click="fontSize += 0.5">
+        <button
+          class="text-indigo-600 hover:text-indigo-500 w-6 h-6"
+          @click="fontSize = Math.round((fontSize + 0.1) * 10) / 10">
           <AddCircle />
         </button>
       </div>
