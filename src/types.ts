@@ -14,3 +14,7 @@ export type DisplayFile = {
   path: string;
   fontSize: number;
 };
+
+export type Page = {
+  columns: DisplayFile[][];
+};

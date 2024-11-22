@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^1",
+    "@vscode/markdown-it-katex": "^1.1.0",
     "markdown-it": "^14.1.0",
     "markdown-it-front-matter": "^0.2.4",
-    "markdown-it-katex": "^2.0.3",
     "vue": "^3.3.4",
     "vuedraggable": "^4.1.0"
   },

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { DisplayFile, SelectedFile } from '../types';
-import { AddCircle, RemoveCircle, Menu, Add } from '@vicons/ionicons5';
+import { onMounted, ref, watch } from 'vue';
+import { DisplayFile, Page, SelectedFile } from '../types';
+import { AddCircle, RemoveCircle, Add } from '@vicons/ionicons5';
 import MdRender from '../components/MdRender.vue';
 import draggable from 'vuedraggable';
 
@@ -10,7 +10,26 @@ const { selectedFiles } = defineProps<{
   nextStep: () => void;
 }>();
 
-const defaultFontSize = 8;
+const pageContainer = ref<HTMLElement | null>(null);
+
+const baseSize = ref<number>(1000);
+onMounted(() => {
+  if (pageContainer.value == null) {
+    return;
+  }
+  const observer = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const rect = entry.target.querySelector('.paperContainer')?.getBoundingClientRect();
+      if (rect == null) {
+        continue;
+      }
+      baseSize.value = Math.max(rect.width, rect.height);
+    }
+  });
+  observer.observe(pageContainer.value);
+});
+
+const defaultFontSize = 4.5;
 
 const availableFiles = ref<DisplayFile[]>(
   selectedFiles.map((f) => ({ ...f, fontSize: defaultFontSize }))
@@ -18,16 +37,12 @@ const availableFiles = ref<DisplayFile[]>(
 watch(
   () => selectedFiles,
   (newValue) => {
-    pages.value = [{ columns: [[]] }];
+    finalPages.value.pages = [{ columns: [[]] }];
     availableFiles.value = newValue.map((f) => ({ ...f, fontSize: defaultFontSize }));
   }
 );
 
-type Page = {
-  columns: DisplayFile[][];
-};
-
-const pages = ref<Page[]>([{ columns: [[]] }]);
+const finalPages = defineModel<{ portrait: boolean; pages: Page[] }>({ required: true });
 
 function addColumn(page: Page) {
   page.columns.push([]);
@@ -46,7 +61,7 @@ function removeColumn(page: Page) {
 }
 
 function addPage() {
-  pages.value.push({ columns: [[]] });
+  finalPages.value.pages.push({ columns: [[]] });
 }
 
 function deletePage(page: Page) {
@@ -55,34 +70,46 @@ function deletePage(page: Page) {
       availableFiles.value.push(file);
     });
   });
-  pages.value.splice(pages.value.indexOf(page), 1);
+  finalPages.value.pages.splice(finalPages.value.pages.indexOf(page), 1);
 }
 </script>
 
 <template>
   <div class="text-gray-700 h-full px-5 py-5 gap-x-5">
     <div class="h-full w-80 pr-5 float-left">
-      <h1 class="text-lg font-black pt-3 pb-2"><span class="h-6">Notes</span></h1>
+      <div class="h-full overflow-y-auto">
+        <div class="pt-3 pb-2 flex items-center justify-between">
+          <h1 class="text-lg font-black"><span class="h-6">Notes</span></h1>
+          <label class="inline-flex items-center cursor-pointer pr-2">
+            <input type="checkbox" class="sr-only peer" v-model="finalPages.portrait" />
+            <span class="me-3 font-medium text-gray-600">Portrait</span>
+            <div
+              class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
 
-      <draggable :list="availableFiles" group="files" itemKey="path" handle=".handle">
-        <template #item="{ element }">
-          <div class="pb-3">
-            <div class="border border-gray-200 rounded-xl px-4 py-2">
-              <div class="flex justify-between items-center">
-                <div class="font-semibold">
-                  {{ element.name }}
-                </div>
-                <div class="w-5 h-5 text-gray-300 cursor-pointer handle">
-                  <Menu />
+        <draggable
+          :list="availableFiles"
+          group="files"
+          itemKey="path"
+          class="h-[calc(100%-theme(spacing.6)-theme(spacing.3)-theme(spacing.3))]">
+          <template #item="{ element }">
+            <div class="pb-3">
+              <div
+                class="border border-gray-200 rounded-xl px-4 py-2 cursor-pointer hover:bg-gray-100 transition-colors">
+                <div class="flex justify-between items-center">
+                  <div class="font-semibold">
+                    {{ element.name }}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </template>
-      </draggable>
+          </template>
+        </draggable>
+      </div>
     </div>
-    <div class="h-full overflow-y-auto">
-      <div v-for="(page, pageI) in pages" :key="pageI">
+    <div class="h-full overflow-y-auto" ref="pageContainer">
+      <div v-for="(page, pageI) in finalPages.pages" :key="pageI" class="pb-6">
         <div class="flex pt-3 pb-2 items-center justify-between">
           <h1 class="text-lg font-black">Page {{ pageI + 1 }}</h1>
 
@@ -90,7 +117,7 @@ function deletePage(page: Page) {
             <div
               :class="[
                 'flex items-center',
-                pages.length > 1 ? 'border-r border-gray-200 pr-3' : '',
+                finalPages.pages.length > 1 ? 'border-r border-gray-200 pr-3' : '',
               ]">
               <div class="pr-2">
                 {{ page.columns.length }} Column{{ page.columns.length === 1 ? '' : 's' }}
@@ -111,7 +138,7 @@ function deletePage(page: Page) {
                 <AddCircle />
               </button>
             </div>
-            <div class="pl-4" v-if="pages.length > 1">
+            <div class="pl-4" v-if="finalPages.pages.length > 1">
               <button
                 class="bg-red-600 hover:bg-red-500 text-white px-4 rounded-md h-6"
                 @click="deletePage(page)">
@@ -120,25 +147,29 @@ function deletePage(page: Page) {
             </div>
           </div>
         </div>
-        <div class="pb-6">
+        <div
+          :class="[
+            finalPages.portrait ? 'aspect-[210/297]' : 'aspect-[297/210]',
+            'grid border border-gray-200 rounded-xl overflow-hidden paperContainer',
+          ]"
+          :style="{ gridTemplateColumns: `repeat(${page.columns.length}, 1fr)` }">
           <div
-            class="grid border border-gray-200 rounded-xl aspect-[1.41] overflow-hidden"
-            :style="{ gridTemplateColumns: `repeat(${page.columns.length}, 1fr)` }">
-            <div
-              v-for="(column, columnI) in page.columns"
-              :key="columnI"
-              class="[&:not(:last-child)]:border-r border-gray-200 min-w-0">
-              <draggable :list="column" group="files" itemKey="path" class="h-full">
-                <template #item="{ element }">
-                  <div class="cursor-pointer py-2 px-3">
-                    <MdRender
-                      :name="element.name"
-                      :path="element.path"
-                      v-model="element.fontSize" />
-                  </div>
-                </template>
-              </draggable>
-            </div>
+            v-for="(column, columnI) in page.columns"
+            :key="columnI"
+            class="[&:not(:last-child)]:border-r border-gray-200 min-w-0">
+            <draggable :list="column" group="files" itemKey="path" class="h-full">
+              <template #item="{ element }">
+                <div
+                  class="cursor-pointer hover:bg-gray-100 transition-colors py-2 px-3 border-b pb-3 border-gray-200">
+                  <MdRender
+                    :name="element.name"
+                    :path="element.path"
+                    :baseSize="baseSize"
+                    :editing="true"
+                    v-model="element.fontSize" />
+                </div>
+              </template>
+            </draggable>
           </div>
         </div>
       </div>

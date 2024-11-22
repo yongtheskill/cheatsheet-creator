@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { readTextFile } from '@tauri-apps/api/fs';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { AddCircle, RemoveCircle } from '@vicons/ionicons5';
 import markdownit from 'markdown-it';
-// @ts-ignore
-import markdownitKatex from 'markdown-it-katex';
+import markdownItKatex from '@vscode/markdown-it-katex';
 import markdownItFrontMatter from 'markdown-it-front-matter';
 
-const { path } = defineProps<{
+const { path, baseSize } = defineProps<{
   name: string;
   path: string;
+  editing: boolean;
+  baseSize: number;
 }>();
 
 const fontSize = defineModel<number>({ required: true });
+
+const baseFontSize = computed(() => baseSize / 1000);
 
 const mdHtml = ref<string | null>(null);
 
@@ -23,7 +26,7 @@ function renderMd(mdStr: string) {
     typographer: true,
   });
 
-  md.use(markdownitKatex, { output: 'html' });
+  md.use(markdownItKatex, { output: 'html' });
   md.use(markdownItFrontMatter, () => {});
 
   mdHtml.value = md.render(mdStr);
@@ -34,20 +37,30 @@ readTextFile(path).then((t) => renderMd(t));
 
 <template>
   <div v-if="mdHtml != null" class="relative">
-    <div v-html="mdHtml" class="markdown-body" :style="{ fontSize: `${fontSize}px` }"></div>
-    <div class="flex items-center absolute top-0 right-0 bg-gray-100 px-2 py-1 rounded-lg">
-      <div class="pr-2">{{ fontSize }}px</div>
-      <button
-        :class="[
-          fontSize <= 0.5 ? 'text-gray-300' : 'text-indigo-600 hover:text-indigo-500',
-          ' w-6 h-6',
-        ]"
-        @click="fontSize -= 0.5">
-        <RemoveCircle />
-      </button>
-      <button class="text-indigo-600 hover:text-indigo-500 w-6 h-6" @click="fontSize += 0.5">
-        <AddCircle />
-      </button>
+    <div>
+      <h1 class="font-black" :style="{ fontSize: `${baseFontSize * fontSize * 2.5}px` }">
+        {{ name.replace(/\.md$/g, '') }}
+      </h1>
+      <div
+        v-html="mdHtml"
+        class="markdown-body"
+        :style="{ fontSize: `${baseFontSize * fontSize}px` }"></div>
+      <div
+        class="flex items-center absolute top-0 right-0 bg-gray-100 px-2 py-1 rounded-lg"
+        v-if="editing">
+        <div class="pr-2">{{ fontSize }}px</div>
+        <button
+          :class="[
+            fontSize <= 0.5 ? 'text-gray-300' : 'text-indigo-600 hover:text-indigo-500',
+            ' w-6 h-6',
+          ]"
+          @click="fontSize -= 0.5">
+          <RemoveCircle />
+        </button>
+        <button class="text-indigo-600 hover:text-indigo-500 w-6 h-6" @click="fontSize += 0.5">
+          <AddCircle />
+        </button>
+      </div>
     </div>
   </div>
 

@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { Home, ChevronForward } from '@vicons/ionicons5';
 import { ref, watch } from 'vue';
+import { sep } from '@tauri-apps/api/path';
 
 const currentPath = defineModel<string>({ required: true });
 const path = ref<string[]>(['Home']);
 
 function syncPath(pathString: string) {
-  const clean = pathString.replace(/^\//g, '').replace(/\/$/g, '');
-  const split = clean.split('/');
+  const clean = pathString
+    .replace(new RegExp(String.raw`^\${sep}`, 'g'), '')
+    .replace(new RegExp(String.raw`\${sep}$`, 'g'), '');
+  const split = clean.split(sep);
   path.value = ['Home'];
   for (const item of split) {
     if (item === '') {
@@ -22,7 +25,7 @@ function toPath(index: number) {
     currentPath.value = '';
     return;
   }
-  const pathString = path.value.slice(1, index + 1).join('/');
+  const pathString = path.value.slice(1, index + 1).join(sep);
   currentPath.value = pathString;
 }
 

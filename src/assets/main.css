@@ -6,3 +6,10 @@
   font-family: 'Inter', sans-serif;
   font-optical-sizing: auto;
 }
+
+@layer base {
+  ul,
+  ol {
+    list-style: revert;
+  }
+}

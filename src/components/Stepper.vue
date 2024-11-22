@@ -98,18 +98,18 @@ const selectedStep = defineModel<number>({ required: true });
       </div>
       <div
         class="flex justify-between flex-1 cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
-        @click="selectedStep = 4">
+        @click="selectedStep = 3">
         <div class="px-4 py-1 flex items-center">
           <div
             :class="[
-              selectedStep === 4
+              selectedStep === 3
                 ? 'border-indigo-600 text-indigo-600'
-                : selectedStep > 4
+                : selectedStep > 3
                 ? 'bg-indigo-600 text-white'
                 : 'border-gray-400 text-gray-400',
               'rounded-full h-10 w-10 border flex items-center justify-center transition-colors',
             ]">
-            <span class="text-xl font-normal pl-[1px]" v-if="selectedStep <= 4">4</span>
+            <span class="text-xl font-normal pl-[1px]" v-if="selectedStep <= 3">4</span>
             <span class="w-6 h-6" v-else><Checkmark /></span>
           </div>
           <span class="pl-3">Export</span>
