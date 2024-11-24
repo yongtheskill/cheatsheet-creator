@@ -28,7 +28,7 @@ async function changeDir(newPath: string) {
   currentPath.value = newPath.slice(homeDirectory.length);
 }
 
-const currentPath = ref('');
+const currentPath = ref('Documents\\obsidian-nus\\nus');
 </script>
 
 <template>

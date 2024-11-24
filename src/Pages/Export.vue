@@ -66,7 +66,7 @@ async function ex() {
         <div
           :class="[
             finalPages.portrait ? 'aspect-[210/297]' : 'aspect-[297/210]',
-            'grid border border-gray-200 rounded-xl overflow-hidden paperContainer printPage',
+            'grid border border-gray-200 rounded-xl overflow-hidden paperContainer printPage p-4',
           ]"
           :id="`page-${pageI}`"
           :style="{ gridTemplateColumns: `repeat(${page.columns.length}, 1fr)` }">
@@ -77,13 +77,16 @@ async function ex() {
             <div
               v-for="file in column"
               :key="file.path"
-              class="cursor-pointer hover:bg-gray-100 transition-colors py-1 px-2 border-b pb-3 border-gray-200">
+              :class="[
+                file.settings.bottomBorder ? ' border-b border-gray-200' : '',
+                'px-2 pb-2 pt-1 ',
+              ]">
               <MdRender
                 :name="file.name"
                 :path="file.path"
                 :baseSize="baseSize"
                 :editing="false"
-                v-model="file.fontSize"
+                v-model="file.settings"
                 :font-correction="fontCorrection" />
             </div>
           </div>

@@ -27,6 +27,17 @@ function getAllFiles(entries: FileEntry[]) {
   return files;
 }
 
+watch(
+  selectedFileDisplay,
+  (newValue) => {
+    selectedFiles.value = newValue.reduce<SelectedFile[]>((acc, curr) => {
+      acc.push(...curr.files);
+      return acc;
+    }, []);
+  },
+  { deep: true }
+);
+
 async function updateFileDisplay(selectedItems: Map<string, SelectedItem>) {
   selectedFileDisplay.value = [];
   const orphanFiles: SelectedFile[] = [];
@@ -57,17 +68,6 @@ watch(
   async (newValue) => {
     await updateFileDisplay(newValue);
   }
-);
-
-watch(
-  selectedFileDisplay,
-  (newValue) => {
-    selectedFiles.value = newValue.reduce<SelectedFile[]>((acc, curr) => {
-      acc.push(...curr.files);
-      return acc;
-    }, []);
-  },
-  { deep: true }
 );
 
 function deleteFile(f: SelectedFile) {

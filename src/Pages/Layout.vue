@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import { DisplayFile, Page, SelectedFile } from '../types';
+import { DisplayFile, DisplayFileSettings, Page, SelectedFile } from '../types';
 import { AddCircle, RemoveCircle, Add } from '@vicons/ionicons5';
 import MdRender from '../components/MdRender.vue';
 import draggable from 'vuedraggable';
@@ -41,7 +41,14 @@ onMounted(() => {
   observer.observe(pageContainer.value);
 });
 
-const defaultFontSize = 4.5;
+const defaultSettings: DisplayFileSettings = {
+  fontSize: 4.5,
+  startLine: 0,
+  endLine: -1,
+  showHeading: true,
+  id: 0,
+  bottomBorder: true,
+};
 
 const availableFiles = ref<DisplayFile[]>(
   selectedFiles
@@ -51,13 +58,23 @@ const availableFiles = ref<DisplayFile[]>(
           p.columns.some((c) => c.some((fc) => fc.path === f.path))
         )
     )
-    .map((f) => ({ ...f, fontSize: defaultFontSize }))
+    .map((f) => ({ ...f, settings: defaultSettings }))
 );
 watch(
   () => selectedFiles,
   (newValue) => {
     finalPages.value.pages = [{ columns: [[]] }];
-    availableFiles.value = newValue.map((f) => ({ ...f, fontSize: defaultFontSize }));
+    availableFiles.value = newValue
+      .filter(
+        (f) =>
+          !finalPages.value.pages.some((p) =>
+            p.columns.some((c) => c.some((fc) => fc.path === f.path))
+          )
+      )
+      .map((f) => ({
+        ...f,
+        settings: defaultSettings,
+      }));
   }
 );
 
@@ -89,6 +106,11 @@ function deletePage(page: Page) {
   });
   finalPages.value.pages.splice(finalPages.value.pages.indexOf(page), 1);
 }
+
+function duplicate(f: DisplayFile) {
+  const newFile: DisplayFile = { ...f, settings: { ...f.settings, id: Math.random() } };
+  availableFiles.value.push(newFile);
+}
 </script>
 
 <template>
@@ -108,10 +130,12 @@ function deletePage(page: Page) {
         <draggable
           :list="availableFiles"
           group="files"
-          itemKey="path"
+          item-key="path"
           class="h-[calc(100%-theme(spacing.6)-theme(spacing.3)-theme(spacing.3))]">
           <template #item="{ element }">
-            <div class="pb-3">
+            <div
+              class="pb-3"
+              :key="`${element.settings.id}-${element.path}-${element.settings.id}-available`">
               <div
                 class="border border-gray-200 rounded-xl px-4 py-2 cursor-pointer hover:bg-gray-100 transition-colors">
                 <div class="flex justify-between items-center">
@@ -167,23 +191,31 @@ function deletePage(page: Page) {
         <div
           :class="[
             finalPages.portrait ? 'aspect-[210/297]' : 'aspect-[297/210]',
-            'grid border border-gray-200 rounded-xl overflow-hidden paperContainer',
+            'grid border border-gray-200 rounded-xl overflow-hidden paperContainer p-4',
           ]"
           :style="{ gridTemplateColumns: `repeat(${page.columns.length}, 1fr)` }">
           <div
             v-for="(column, columnI) in page.columns"
             :key="columnI"
             class="[&:not(:last-child)]:border-r border-gray-200 min-w-0">
-            <draggable :list="column" group="files" itemKey="path" class="h-full">
+            <draggable :list="column" group="files" item-key="path" class="h-full">
               <template #item="{ element }">
                 <div
-                  class="cursor-pointer hover:bg-gray-100 transition-colors py-1 px-2 border-b pb-3 border-gray-200">
+                  :class="[
+                    element.settings.bottomBorder ? 'border-b  border-gray-200' : '',
+                    'cursor-pointer hover:bg-gray-100 transition-colors px-2 pb-2 pt-1',
+                  ]"
+                  :key="`${element.settings.id}-${element.path}-${element.settings.id}`">
                   <MdRender
                     :name="element.name"
                     :path="element.path"
                     :baseSize="baseSize"
                     :editing="true"
-                    v-model="element.fontSize" />
+                    :settings="element.settings"
+                    :endLine="element.settings.endLine"
+                    :duplicate="() => duplicate(element)"
+                    v-model="element.settings"
+                    :key="`${element.settings.id}-${element.path}-${element.settings.id}`" />
                 </div>
               </template>
             </draggable>

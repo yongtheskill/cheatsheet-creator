@@ -9,10 +9,19 @@ export type SelectedFile = {
   path: string;
 };
 
+export type DisplayFileSettings = {
+  fontSize: number;
+  startLine: number;
+  endLine: number;
+  showHeading: boolean;
+  bottomBorder: boolean;
+  id: number;
+};
+
 export type DisplayFile = {
   name: string;
   path: string;
-  fontSize: number;
+  settings: DisplayFileSettings;
 };
 
 export type Page = {

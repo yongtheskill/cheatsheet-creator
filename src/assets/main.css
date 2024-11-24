@@ -13,3 +13,11 @@
     list-style: revert;
   }
 }
+
+.katex-display {
+  text-align: left !important;
+}
+
+.katex-display > .katex {
+  text-align: left !important;
+}
