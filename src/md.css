@@ -1,0 +1,61 @@
+.mdContainer h1 {
+  padding-top: 0.2em;
+  padding-bottom: 0.1em;
+  text-align: center;
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #1e293b; /* slate-800 */
+}
+
+.mdContainer h2 {
+  font-size: 1em;
+  padding-left: 0.1em;
+  padding-top: 0.1em;
+  font-weight: 600;
+  color: #334155; /* slate-700 */
+  border-bottom: 1px solid #e2e8f0; /* slate-200 */
+  margin-bottom: 0.2em;
+}
+
+.mdContainer {
+  line-height: 1.4;
+  color: #0f172a; /* slate-900 */
+}
+
+.mdContainer ul {
+  list-style-type: none;
+  padding-left: 0.2em;
+}
+
+.mdContainer ul li {
+  background-image: url(/circle.svg);
+  background-repeat: no-repeat;
+  background-position: left 0.4em;
+  background-size: 0.35em;
+  padding-left: 0.8em;
+  margin-bottom: 0.1em;
+}
+
+.katex {
+  font-size: 0.9em;
+}
+
+.mdContainer p {
+  margin-bottom: 0.4em;
+}
+
+.mdContainer code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background-color: #f1f5f9; /* slate-100 */
+  padding: 0.1em 0.3em;
+  border-radius: 0.2em;
+  font-size: 0.9em;
+}
+
+.mdContainer pre {
+  background-color: #f8fafc; /* slate-50 */
+  padding: 0.5em;
+  border-radius: 0.4em;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0; /* slate-200 */
+}
