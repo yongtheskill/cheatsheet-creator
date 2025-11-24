@@ -1,20 +1,45 @@
+.mdContainer blockquote {
+  text-align: center;
+  font-size: 1.2em;
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.mdContainer .katex-display {
+  margin: 0;
+}
+
 .mdContainer h1 {
-  padding-top: 0.2em;
-  padding-bottom: 0.1em;
   text-align: center;
   font-size: 1.2em;
   font-weight: 700;
-  color: #1e293b; /* slate-800 */
 }
 
 .mdContainer h2 {
-  font-size: 1em;
-  padding-left: 0.1em;
-  padding-top: 0.1em;
-  font-weight: 600;
-  color: #334155; /* slate-700 */
-  border-bottom: 1px solid #e2e8f0; /* slate-200 */
-  margin-bottom: 0.2em;
+  text-align: center;
+  font-size: 1.1em;
+  font-weight: 400;
+}
+
+.mdContainer h3 {
+  padding-left: 1em;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.mdContainer table {
+  table-layout: auto;
+  border: 1px solid #555;
+}
+
+.mdContainer table th {
+  border: 1px solid #555;
+  padding: 0.1em 0.2em;
+}
+
+.mdContainer table td {
+  border: 1px solid #555;
+  padding: 0.1em 0.2em;
 }
 
 .mdContainer {
@@ -58,4 +83,8 @@
   border-radius: 0.4em;
   overflow-x: auto;
   border: 1px solid #e2e8f0; /* slate-200 */
+}
+
+.mdContainer p {
+  margin-bottom: 0;
 }

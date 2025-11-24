@@ -176,7 +176,7 @@ function App() {
       y: 50,
       width: 300,
       height: 200,
-      fontSize: 12,
+      fontSize: 8,
     };
     setTextBoxes((prev) => [...prev, newBox]);
     setSelectedBoxId(newBox.id);
@@ -342,7 +342,7 @@ function App() {
       {pages.map((id, index) => (
         <div className='w-full group' key={id}>
           <div
-            className='relative w-max mx-auto print:break-after-page'
+            className='relative w-max mx-auto not-last:print:break-after-page'
             onClick={() => setSelectedBoxId(null)}>
             <A4Page margin={margin ?? 5}>
               {/* Text Boxes for this page */}
