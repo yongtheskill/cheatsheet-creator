@@ -80,6 +80,33 @@ const InnerMarkdown = React.memo(
               />
             );
           },
+          p({ children, ...props }: any) {
+            // Check if paragraph contains only images
+            const childArray = React.Children.toArray(children);
+            const allImages = childArray.every(
+              (child: any) =>
+                child?.type === 'img' ||
+                child?.type?.name === 'img' ||
+                (React.isValidElement(child) && (child.type === 'img' || (child.props as any)?.src))
+            );
+
+            // If multiple images, wrap in flex container
+            if (allImages && childArray.length > 1) {
+              return (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '4px',
+                    alignItems: 'flex-start',
+                  }}>
+                  {children}
+                </div>
+              );
+            }
+
+            return <p {...props}>{children}</p>;
+          },
         }}>
         {processedContent}
       </ReactMarkdown>
