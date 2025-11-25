@@ -22,6 +22,7 @@ interface TextBoxProps {
   onUpdate: (id: string, updates: Partial<TextBoxData>) => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  imageMap?: Record<string, string>;
 }
 
 export const TextBox: React.FC<TextBoxProps> = ({
@@ -30,6 +31,7 @@ export const TextBox: React.FC<TextBoxProps> = ({
   onUpdate,
   onSelect,
   onDelete,
+  imageMap = {},
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -119,7 +121,11 @@ export const TextBox: React.FC<TextBoxProps> = ({
             />
           ) : (
             <div className='w-full h-full overflow-hidden'>
-              <MarkdownRenderer content={data.content} fontSize={data.fontSize} />
+              <MarkdownRenderer
+                content={data.content}
+                fontSize={data.fontSize}
+                imageMap={imageMap}
+              />
             </div>
           )}
         </div>

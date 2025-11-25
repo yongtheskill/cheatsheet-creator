@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { A4Page } from './components/A4Page';
 import { TextBox, type TextBoxData } from './components/TextBox';
-import { Plus, Trash2, Type, Download, FileJson, Save, Upload } from 'lucide-react';
+import { Plus, Trash2, Type, Download, FileJson, Save, Upload, Image } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -12,6 +12,7 @@ interface Project {
     pages: string[];
     margin: number | null;
     textBoxes: TextBoxData[];
+    imageMap?: Record<string, string>;
   };
 }
 
@@ -20,6 +21,8 @@ function App() {
   const [margin, setMargin] = useState<number | null>(5);
   const [textBoxes, setTextBoxes] = useState<TextBoxData[]>([]);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
+  const [imageMap, setImageMap] = useState<Record<string, string>>({});
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Project Management State
   const [projects, setProjects] = useState<Project[]>(() => {
@@ -50,6 +53,7 @@ function App() {
         pages,
         margin,
         textBoxes,
+        imageMap,
       },
     };
 
@@ -65,6 +69,7 @@ function App() {
       setPages(project.data.pages);
       setMargin(project.data.margin);
       setTextBoxes(project.data.textBoxes);
+      setImageMap(project.data.imageMap || {});
       setCurrentProjectName(project.name);
       setSelectedBoxId(null);
     }
@@ -84,6 +89,7 @@ function App() {
       pages,
       margin,
       textBoxes,
+      imageMap,
       exportedAt: new Date().toISOString(),
     };
 
@@ -124,6 +130,7 @@ function App() {
             setPages(projectData.pages);
             setMargin(projectData.margin || 5);
             setTextBoxes(projectData.textBoxes);
+            setImageMap(projectData.imageMap || {});
             setCurrentProjectName(uniqueName);
             setSelectedBoxId(null);
 
@@ -136,6 +143,7 @@ function App() {
                 pages: projectData.pages,
                 margin: projectData.margin || 5,
                 textBoxes: projectData.textBoxes,
+                imageMap: projectData.imageMap || {},
               },
             };
 
@@ -196,9 +204,38 @@ function App() {
       setPages(['page-1']);
       setMargin(5);
       setTextBoxes([]);
+      setImageMap({});
       setCurrentProjectName('');
       setSelectedBoxId(null);
     }
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setImageMap((prev) => ({
+          ...prev,
+          [file.name]: dataUrl,
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input value so same file can be selected again
+    event.target.value = '';
+  };
+
+  const removeImage = (imageName: string) => {
+    setImageMap((prev) => {
+      const updated = { ...prev };
+      delete updated[imageName];
+      return updated;
+    });
   };
 
   return (
@@ -259,6 +296,47 @@ function App() {
                 <Download size={16} /> PDF
               </button>
             </div>
+          </div>
+
+          {/* Images Section */}
+          <div className='space-y-3'>
+            <h2 className='text-xs font-bold text-slate-400 uppercase tracking-wider'>Images</h2>
+            <p className='text-xs text-slate-500'>
+              Upload images and use{' '}
+              <code className='bg-slate-100 px-1 rounded'>![[filename.png]]</code> in markdown
+            </p>
+            <label className='flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer'>
+              <Image size={16} /> Upload Images
+              <input
+                ref={imageInputRef}
+                type='file'
+                accept='image/*'
+                multiple
+                onChange={handleImageUpload}
+                className='hidden'
+              />
+            </label>
+
+            {Object.keys(imageMap).length > 0 && (
+              <div className='space-y-2 max-h-40 overflow-y-auto custom-scrollbar'>
+                {Object.entries(imageMap).map(([name, dataUrl]) => (
+                  <div
+                    key={name}
+                    className='flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg group hover:bg-slate-50'>
+                    <img src={dataUrl} alt={name} className='w-8 h-8 object-cover rounded' />
+                    <span className='text-xs text-slate-600 truncate flex-1' title={name}>
+                      {name}
+                    </span>
+                    <button
+                      onClick={() => removeImage(name)}
+                      className='p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100 cursor-pointer'
+                      title='Remove'>
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className='mt-3 pt-6 space-y-3'>
@@ -356,6 +434,7 @@ function App() {
                     onSelect={setSelectedBoxId}
                     onUpdate={updateTextBox}
                     onDelete={deleteTextBox}
+                    imageMap={imageMap}
                   />
                 ))}
 
