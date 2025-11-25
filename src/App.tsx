@@ -35,6 +35,29 @@ function App() {
     localStorage.setItem('markdown-layout-projects', JSON.stringify(projects));
   }, [projects]);
 
+  // Handle beforeprint/afterprint to set document title for PDF filename
+  useEffect(() => {
+    const originalTitle = document.title;
+
+    const handleBeforePrint = () => {
+      if (currentProjectName) {
+        document.title = currentProjectName;
+      }
+    };
+
+    const handleAfterPrint = () => {
+      document.title = originalTitle;
+    };
+
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener('afterprint', handleAfterPrint);
+
+    return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, [currentProjectName]);
+
   const saveProject = () => {
     const name = prompt(
       'Enter project name:',
