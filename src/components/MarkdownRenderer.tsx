@@ -18,7 +18,7 @@ interface MarkdownRendererProps {
 // Supports: ![[image.png]], ![[image.png|alt]], ![[image.png|250]] (width in px)
 const processObsidianImages = (content: string, imageMap: Record<string, string> = {}): string => {
   // Match ![[filename]] or ![[filename|alt or width]] patterns
-  return content.replace(/!\[\[([^\]|]+)(?:\|([^\]]*))?\]\]/g, (match, filename, modifier) => {
+  return content.replace(/!\[\[([^\]|]+)(?:\|([^\]]*))?\]\]/g, (_match, filename, modifier) => {
     const trimmedFilename = filename.trim();
     const imageUrl = imageMap[trimmedFilename];
 
