@@ -50,7 +50,12 @@ const InnerMarkdown = React.memo(
           code({ node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             return !inline && match ? (
-              <SyntaxHighlighter {...props} style={vs} language={match[1]} PreTag='div'>
+              <SyntaxHighlighter
+                {...props}
+                style={vs}
+                language={match[1]}
+                PreTag='div'
+                className='codeHighlight'>
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
             ) : (

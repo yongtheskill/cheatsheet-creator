@@ -69,22 +69,25 @@
   margin-bottom: 0.4em;
 }
 
-.mdContainer code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  background-color: #f1f5f9; /* slate-100 */
-  padding: 0.1em 0.3em;
-  border-radius: 0.2em;
-  font-size: 0.9em;
+.mdContainer p {
+  margin-bottom: 0;
 }
 
 .mdContainer pre {
-  background-color: #f8fafc; /* slate-50 */
-  padding: 0.5em;
-  border-radius: 0.4em;
-  overflow-x: auto;
-  border: 1px solid #e2e8f0; /* slate-200 */
+  margin: 0.2em 0.1em;
+  padding: 0.2em 0.4em;
+  line-height: 1.2 !important;
+  border: 1px solid #aaa;
 }
 
-.mdContainer p {
-  margin-bottom: 0;
+.mdContainer .codeHighlight {
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.mdContainer code {
+  font-size: 0.95em;
+  font-family: 'Inconsolata', monospace;
+  font-weight: 600;
 }
