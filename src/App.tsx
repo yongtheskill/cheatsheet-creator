@@ -2,19 +2,26 @@ import { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { A4Page } from './components/A4Page';
 import { TextBox, type TextBoxData } from './components/TextBox';
-import { Plus, Trash2, Type, Download, FileJson, Save, Upload, Image } from 'lucide-react';
-
-interface Project {
-  id: string;
-  name: string;
-  lastModified: number;
-  data: {
-    pages: string[];
-    margin: number | null;
-    textBoxes: TextBoxData[];
-    imageMap?: Record<string, string>;
-  };
-}
+import {
+  Plus,
+  Trash2,
+  Type,
+  Download,
+  FileJson,
+  Save,
+  Upload,
+  Image,
+  Pencil,
+  Check,
+} from 'lucide-react';
+import {
+  getAllProjects,
+  upsertProject,
+  deleteProjectFromDB,
+  getSetting,
+  setSetting,
+  type Project,
+} from './lib/db';
 
 function App() {
   const [pages, setPages] = useState<string[]>(['page-1']);
@@ -25,15 +32,70 @@ function App() {
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Project Management State
-  const [projects, setProjects] = useState<Project[]>(() => {
-    const saved = localStorage.getItem('markdown-layout-projects');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [currentProjectName, setCurrentProjectName] = useState<string>('');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [currentProjectName, setCurrentProjectName] = useState<string>('Untitled Project');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
+  /** Apply project data to state (no confirmation) */
+  const applyProjectData = (project: Project) => {
+    setPages(project.data.pages);
+    setMargin(project.data.margin);
+    setTextBoxes(project.data.textBoxes);
+    setImageMap(project.data.imageMap || {});
+    setCurrentProjectId(project.id);
+    setCurrentProjectName(project.name);
+    setSelectedBoxId(null);
+  };
+
+  // Load all projects from IndexedDB and restore last visited project on mount
   useEffect(() => {
-    localStorage.setItem('markdown-layout-projects', JSON.stringify(projects));
-  }, [projects]);
+    const init = async () => {
+      try {
+        // One-time migration from localStorage
+        const lsRaw = localStorage.getItem('markdown-layout-projects');
+        if (lsRaw) {
+          try {
+            const lsProjects: Project[] = JSON.parse(lsRaw);
+            if (Array.isArray(lsProjects) && lsProjects.length > 0) {
+              const existing = await getAllProjects();
+              const existingIds = new Set(existing.map((p) => p.id));
+              for (const p of lsProjects) {
+                if (!existingIds.has(p.id)) {
+                  await upsertProject(p);
+                }
+              }
+            }
+          } catch {
+            // ignore malformed localStorage data
+          }
+          localStorage.removeItem('markdown-layout-projects');
+        }
+
+        const allProjects = await getAllProjects();
+        const sorted = allProjects.sort((a, b) => b.lastModified - a.lastModified);
+        setProjects(sorted);
+
+        const lastId = await getSetting('lastProjectId');
+        if (lastId) {
+          const last = sorted.find((p) => p.id === lastId);
+          if (last) applyProjectData(last);
+        }
+      } catch (err) {
+        console.error('Failed to load projects from IndexedDB', err);
+      }
+    };
+    init();
+  }, []);
+
+  // Focus name input when editing starts
+  useEffect(() => {
+    if (isEditingName) {
+      nameInputRef.current?.focus();
+      nameInputRef.current?.select();
+    }
+  }, [isEditingName]);
 
   // Handle beforeprint/afterprint to set document title for PDF filename
   useEffect(() => {
@@ -58,51 +120,41 @@ function App() {
     };
   }, [currentProjectName]);
 
-  const saveProject = () => {
-    const name = prompt(
-      'Enter project name:',
-      currentProjectName || `Project ${new Date().toLocaleDateString()}`
-    );
-    if (!name) return;
+  const saveProject = async () => {
+    const name = currentProjectName.trim() || 'Untitled Project';
+    const id = currentProjectId ?? crypto.randomUUID();
 
-    const newProject: Project = {
-      id:
-        currentProjectName === name && projects.find((p) => p.name === name)
-          ? projects.find((p) => p.name === name)!.id
-          : crypto.randomUUID(),
+    const project: Project = {
+      id,
       name,
       lastModified: Date.now(),
-      data: {
-        pages,
-        margin,
-        textBoxes,
-        imageMap,
-      },
+      data: { pages, margin, textBoxes, imageMap },
     };
 
-    setProjects((prev) => {
-      const filtered = prev.filter((p) => p.name !== name);
-      return [...filtered, newProject].sort((a, b) => b.lastModified - a.lastModified);
-    });
+    await upsertProject(project);
+    await setSetting('lastProjectId', id);
+
+    setCurrentProjectId(id);
     setCurrentProjectName(name);
+    setProjects((prev) => {
+      const filtered = prev.filter((p) => p.id !== id);
+      return [project, ...filtered];
+    });
   };
 
-  const loadProject = (project: Project) => {
+  const loadProject = async (project: Project) => {
     if (confirm('Unsaved changes will be lost. Load project?')) {
-      setPages(project.data.pages);
-      setMargin(project.data.margin);
-      setTextBoxes(project.data.textBoxes);
-      setImageMap(project.data.imageMap || {});
-      setCurrentProjectName(project.name);
-      setSelectedBoxId(null);
+      applyProjectData(project);
+      await setSetting('lastProjectId', project.id);
     }
   };
 
-  const deleteProject = (projectId: string) => {
+  const deleteProject = async (projectId: string) => {
     if (confirm('Are you sure you want to delete this project?')) {
+      await deleteProjectFromDB(projectId);
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
-      if (projects.find((p) => p.id === projectId)?.name === currentProjectName) {
-        setCurrentProjectName('');
+      if (projectId === currentProjectId) {
+        setCurrentProjectId(null);
       }
     }
   };
@@ -127,12 +179,12 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const importProject = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const importProject = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
         const projectData = JSON.parse(content);
@@ -140,39 +192,34 @@ function App() {
         // Basic validation
         if (Array.isArray(projectData.pages) && Array.isArray(projectData.textBoxes)) {
           if (confirm('Unsaved changes will be lost. Import project?')) {
+            const allExisting = await getAllProjects();
             const baseName = file.name.replace('.json', '');
             let uniqueName = baseName;
             let counter = 1;
 
             // Find unique name
-            while (projects.some((p) => p.name === uniqueName)) {
+            while (allExisting.some((p) => p.name === uniqueName)) {
               uniqueName = `${baseName} ${counter}`;
               counter++;
             }
 
-            setPages(projectData.pages);
-            setMargin(projectData.margin || 5);
-            setTextBoxes(projectData.textBoxes);
-            setImageMap(projectData.imageMap || {});
-            setCurrentProjectName(uniqueName);
-            setSelectedBoxId(null);
-
-            // Add to saved projects
             const newProject: Project = {
               id: crypto.randomUUID(),
               name: uniqueName,
               lastModified: Date.now(),
               data: {
                 pages: projectData.pages,
-                margin: projectData.margin || 5,
+                margin: projectData.margin ?? 5,
                 textBoxes: projectData.textBoxes,
                 imageMap: projectData.imageMap || {},
               },
             };
 
-            setProjects((prev) => {
-              return [...prev, newProject].sort((a, b) => b.lastModified - a.lastModified);
-            });
+            await upsertProject(newProject);
+            await setSetting('lastProjectId', newProject.id);
+
+            applyProjectData(newProject);
+            setProjects((prev) => [newProject, ...prev]);
           }
         } else {
           alert('Invalid project file format');
@@ -228,8 +275,32 @@ function App() {
       setMargin(5);
       setTextBoxes([]);
       setImageMap({});
-      setCurrentProjectName('');
+      setCurrentProjectId(null);
+      setCurrentProjectName('Untitled Project');
       setSelectedBoxId(null);
+    }
+  };
+
+  const commitNameEdit = async () => {
+    setIsEditingName(false);
+    const trimmed = currentProjectName.trim();
+    const name = trimmed || 'Untitled Project';
+    if (!trimmed) setCurrentProjectName('Untitled Project');
+    // If a project is already saved, update its name in IndexedDB live
+    if (currentProjectId) {
+      const updated: Project = {
+        id: currentProjectId,
+        name,
+        lastModified: Date.now(),
+        data: { pages, margin, textBoxes, imageMap },
+      };
+      await upsertProject(updated);
+      setCurrentProjectName(name);
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === currentProjectId ? { ...p, name, lastModified: updated.lastModified } : p,
+        ),
+      );
     }
   };
 
@@ -268,6 +339,49 @@ function App() {
           <div>
             <h1 className='text-xl font-bold text-slate-800 tracking-tight'>Cheatsheet Creator</h1>
             <p className='text-xs text-slate-500'>Use Markdown!</p>
+          </div>
+
+          {/* Editable Project Name */}
+          <div className='flex items-center gap-2 -mt-2'>
+            {isEditingName ? (
+              <div className='flex items-center gap-2 flex-1'>
+                <input
+                  ref={nameInputRef}
+                  type='text'
+                  value={currentProjectName}
+                  onChange={(e) => setCurrentProjectName(e.target.value)}
+                  onBlur={commitNameEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitNameEdit();
+                    if (e.key === 'Escape') setIsEditingName(false);
+                  }}
+                  className='flex-1 bg-white border border-blue-400 rounded-md px-2 py-1 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Untitled Project'
+                />
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    commitNameEdit();
+                  }}
+                  className='p-1 text-blue-600 hover:bg-blue-50 rounded cursor-pointer'>
+                  <Check size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className='flex items-center gap-2 flex-1 group/name'>
+                <span
+                  className='flex-1 text-sm font-semibold text-slate-700 truncate cursor-text'
+                  title={currentProjectName}
+                  onClick={() => setIsEditingName(true)}>
+                  {currentProjectName || 'Untitled Project'}
+                </span>
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className='p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded opacity-0 group-hover/name:opacity-100 transition-opacity cursor-pointer'>
+                  <Pencil size={12} />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className='space-y-3'>
@@ -398,17 +512,19 @@ function App() {
 
           {projects.length > 0 && (
             <div className='flex-1 overflow-hidden flex flex-col'>
-              {/* <h2 className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-3'>
-                Saved
-              </h2> */}
               <div className='flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar'>
                 {projects.map((project) => (
                   <div
                     key={project.id}
-                    className='flex items-center justify-between p-2.5 bg-white border border-slate-200 hover:border-slate-300 rounded-lg group hover:bg-slate-50 transition-all cursor-pointer'
+                    className={`flex items-center justify-between p-2.5 border rounded-lg group transition-all cursor-pointer ${
+                      project.id === currentProjectId
+                        ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-300'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
                     onClick={() => loadProject(project)}>
                     <div className='flex items-center gap-3 overflow-hidden'>
-                      <div className='p-1.5 bg-indigo-50 text-indigo-600 rounded-md'>
+                      <div
+                        className={`p-1.5 rounded-md ${project.id === currentProjectId ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-50 text-indigo-600'}`}>
                         <FileJson size={14} />
                       </div>
                       <div className='flex flex-col overflow-hidden'>
