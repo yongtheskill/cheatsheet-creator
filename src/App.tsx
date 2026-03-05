@@ -30,7 +30,24 @@ function App() {
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [imageMap, setImageMap] = useState<Record<string, string>>({});
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const [contextMenu, setContextMenu] = useState<{ pageId: string; x: number; y: number; relX: number; relY: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    pageId: string;
+    x: number;
+    y: number;
+    relX: number;
+    relY: number;
+  } | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const skipDirtyCheck = useRef(true); // skip on initial mount / after load
+
+  // Track unsaved changes
+  useEffect(() => {
+    if (skipDirtyCheck.current) {
+      skipDirtyCheck.current = false;
+      return;
+    }
+    setIsDirty(true);
+  }, [pages, textBoxes, margin, imageMap]);
 
   // Project Management State
   const [projects, setProjects] = useState<Project[]>([]);
@@ -41,6 +58,8 @@ function App() {
 
   /** Apply project data to state (no confirmation) */
   const applyProjectData = (project: Project) => {
+    skipDirtyCheck.current = true;
+    setIsDirty(false);
     setPages(project.data.pages);
     setMargin(project.data.margin);
     setTextBoxes(project.data.textBoxes);
@@ -125,7 +144,9 @@ function App() {
   useEffect(() => {
     if (!contextMenu) return;
     const close = () => setContextMenu(null);
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
     document.addEventListener('click', close);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -150,6 +171,7 @@ function App() {
 
     setCurrentProjectId(id);
     setCurrentProjectName(name);
+    setIsDirty(false);
     setProjects((prev) => {
       const filtered = prev.filter((p) => p.id !== id);
       return [project, ...filtered];
@@ -157,7 +179,7 @@ function App() {
   };
 
   const loadProject = async (project: Project) => {
-    if (confirm('Unsaved changes will be lost. Load project?')) {
+    if (!isDirty || confirm('Unsaved changes will be lost. Load project?')) {
       applyProjectData(project);
       await setSetting('lastProjectId', project.id);
     }
@@ -205,7 +227,7 @@ function App() {
 
         // Basic validation
         if (Array.isArray(projectData.pages) && Array.isArray(projectData.textBoxes)) {
-          if (confirm('Unsaved changes will be lost. Import project?')) {
+          if (!isDirty || confirm('Unsaved changes will be lost. Import project?')) {
             const allExisting = await getAllProjects();
             const baseName = file.name.replace('.json', '');
             let uniqueName = baseName;
@@ -284,7 +306,9 @@ function App() {
   };
 
   const createNewProject = () => {
-    if (confirm('Unsaved changes will be lost. Create new project?')) {
+    if (!isDirty || confirm('Unsaved changes will be lost. Create new project?')) {
+      skipDirtyCheck.current = true;
+      setIsDirty(false);
       setPages(['page-1']);
       setMargin(5);
       setTextBoxes([]);
@@ -351,7 +375,7 @@ function App() {
       sidebar={
         <div className='px-6 py-5 flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar'>
           {/* Editable Project Name */}
-          <div className='group/name'>
+          <div className='-mb-3'>
             {isEditingName ? (
               <div className='flex items-center gap-2'>
                 <input
@@ -638,7 +662,11 @@ function App() {
           <button
             className='w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer'
             onClick={() => {
-              addTextBox(contextMenu.pageId, Math.max(0, contextMenu.relX - 150), Math.max(0, contextMenu.relY - 100));
+              addTextBox(
+                contextMenu.pageId,
+                Math.max(0, contextMenu.relX - 150),
+                Math.max(0, contextMenu.relY - 100),
+              );
               setContextMenu(null);
             }}>
             <Type size={14} />
