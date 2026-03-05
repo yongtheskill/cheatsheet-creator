@@ -103,7 +103,7 @@ export const TextBox: React.FC<TextBoxProps> = ({
           className={clsx(
             'w-full h-full relative',
             isSelected && !isEditing && 'ring-2 ring-indigo-500',
-            'hover:ring-1 hover:ring-indigo-300 transition-shadow rounded-sm'
+            'hover:ring-1 hover:ring-indigo-300 transition-shadow rounded-sm',
           )}
           onDoubleClick={handleDoubleClick}
           onClick={(e) => {
@@ -172,12 +172,12 @@ export const TextBox: React.FC<TextBoxProps> = ({
                 e.stopPropagation();
                 onDelete(data.id);
               }}
-              className='text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md p-1.5 transition-colors'
+              className='text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md p-1.5 transition-colors cursor-pointer'
               title='Delete'>
               <Trash2 size={14} />
             </button>
           </div>,
-          document.body
+          document.body,
         )}
     </>
   );

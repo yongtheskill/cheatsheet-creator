@@ -23,8 +23,9 @@ const processObsidianImages = (content: string, imageMap: Record<string, string>
     const trimmedFilename = filename.trim();
     const imageUrl = imageMap[trimmedFilename];
 
-    // If image not found in map, return empty string (skip rendering)
-    if (!imageUrl) return '';
+    // If image not found in map, render an inline warning
+    if (!imageUrl)
+      return `<span class="missing-image-warning">⚠ Image not uploaded: <code>${trimmedFilename}</code></span>`;
 
     const trimmedModifier = modifier?.trim() || '';
 

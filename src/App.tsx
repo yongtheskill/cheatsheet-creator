@@ -30,6 +30,7 @@ function App() {
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [imageMap, setImageMap] = useState<Record<string, string>>({});
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [contextMenu, setContextMenu] = useState<{ pageId: string; x: number; y: number; relX: number; relY: number } | null>(null);
 
   // Project Management State
   const [projects, setProjects] = useState<Project[]>([]);
@@ -119,6 +120,19 @@ function App() {
       window.removeEventListener('afterprint', handleAfterPrint);
     };
   }, [currentProjectName]);
+
+  // Close context menu on any click or Escape
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [contextMenu]);
 
   const saveProject = async () => {
     const name = currentProjectName.trim() || 'Untitled Project';
@@ -245,13 +259,13 @@ function App() {
     }
   };
 
-  const addTextBox = (pageId: string) => {
+  const addTextBox = (pageId: string, atX?: number, atY?: number) => {
     const newBox: TextBoxData = {
       id: `box-${Date.now()}`,
       pageId,
       content: 'Double click to edit.',
-      x: 50,
-      y: 50,
+      x: atX ?? 50,
+      y: atY ?? 50,
       width: 300,
       height: 200,
       fontSize: 8,
@@ -336,15 +350,10 @@ function App() {
     <Layout
       sidebar={
         <div className='px-6 py-5 flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar'>
-          <div>
-            <h1 className='text-xl font-bold text-slate-800 tracking-tight'>Cheatsheet Creator</h1>
-            <p className='text-xs text-slate-500'>Use Markdown!</p>
-          </div>
-
           {/* Editable Project Name */}
-          <div className='flex items-center gap-2 -mt-2'>
+          <div className='group/name'>
             {isEditingName ? (
-              <div className='flex items-center gap-2 flex-1'>
+              <div className='flex items-center gap-2'>
                 <input
                   ref={nameInputRef}
                   type='text'
@@ -355,7 +364,7 @@ function App() {
                     if (e.key === 'Enter') commitNameEdit();
                     if (e.key === 'Escape') setIsEditingName(false);
                   }}
-                  className='flex-1 bg-white border border-blue-400 rounded-md px-2 py-1 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className='flex-1 bg-slate-50 border border-blue-400 rounded-lg px-2 py-1 text-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
                   placeholder='Untitled Project'
                 />
                 <button
@@ -368,16 +377,16 @@ function App() {
                 </button>
               </div>
             ) : (
-              <div className='flex items-center gap-2 flex-1 group/name'>
-                <span
-                  className='flex-1 text-sm font-semibold text-slate-700 truncate cursor-text'
+              <div className='flex items-center gap-2'>
+                <h1
+                  className='text-xl font-bold text-slate-800 tracking-tight truncate cursor-text flex-1'
                   title={currentProjectName}
                   onClick={() => setIsEditingName(true)}>
                   {currentProjectName || 'Untitled Project'}
-                </span>
+                </h1>
                 <button
                   onClick={() => setIsEditingName(true)}
-                  className='p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded opacity-0 group-hover/name:opacity-100 transition-opacity cursor-pointer'>
+                  className='p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded opacity-0 group-hover/name:opacity-100 transition-opacity cursor-pointer flex-shrink-0'>
                   <Pencil size={12} />
                 </button>
               </div>
@@ -388,6 +397,7 @@ function App() {
             <h2 className='text-xs font-bold text-slate-400 uppercase tracking-wider'>
               Document Settings
             </h2>
+
             <div className='space-y-1'>
               <label className='text-sm font-medium text-slate-600'>Page Margin (mm)</label>
               <div className='flex items-center gap-1'>
@@ -476,7 +486,7 @@ function App() {
             )}
           </div>
 
-          <div className='mt-3 pt-6 space-y-3'>
+          <div className='mt-3 space-y-3'>
             <h2 className='text-xs font-bold text-slate-400 uppercase tracking-wider'>Project</h2>
 
             <div className='grid grid-cols-2 gap-2'>
@@ -506,61 +516,70 @@ function App() {
                 <input type='file' accept='.json' onChange={importProject} className='hidden' />
               </label>
             </div>
-          </div>
 
-          <div className='w-20 mx-auto border-t border-slate-200'></div>
+            <div className='w-20 mx-auto border-t border-slate-200'></div>
 
-          {projects.length > 0 && (
-            <div className='flex-1 overflow-hidden flex flex-col'>
-              <div className='flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar'>
-                {projects.map((project) => (
-                  <div
-                    key={project.id}
-                    className={`flex items-center justify-between p-2.5 border rounded-lg group transition-all cursor-pointer ${
-                      project.id === currentProjectId
-                        ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-300'
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                    }`}
-                    onClick={() => loadProject(project)}>
-                    <div className='flex items-center gap-3 overflow-hidden'>
-                      <div
-                        className={`p-1.5 rounded-md ${project.id === currentProjectId ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-50 text-indigo-600'}`}>
-                        <FileJson size={14} />
+            {projects.length > 0 && (
+              <div className='flex-1 overflow-hidden flex flex-col'>
+                <div className='flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar'>
+                  {projects.map((project) => (
+                    <div
+                      key={project.id}
+                      className={`flex items-center justify-between p-2.5 border rounded-lg group transition-all cursor-pointer ${
+                        project.id === currentProjectId
+                          ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-300'
+                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                      onClick={() => loadProject(project)}>
+                      <div className='flex items-center gap-3 overflow-hidden'>
+                        <div
+                          className={`p-1.5 rounded-md ${project.id === currentProjectId ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-50 text-indigo-600'}`}>
+                          <FileJson size={14} />
+                        </div>
+                        <div className='flex flex-col overflow-hidden'>
+                          <span
+                            className='text-sm font-medium text-slate-700 truncate'
+                            title={project.name}>
+                            {project.name}
+                          </span>
+                          <span className='text-[10px] text-slate-400'>
+                            {new Date(project.lastModified).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
-                      <div className='flex flex-col overflow-hidden'>
-                        <span
-                          className='text-sm font-medium text-slate-700 truncate'
-                          title={project.name}>
-                          {project.name}
-                        </span>
-                        <span className='text-[10px] text-slate-400'>
-                          {new Date(project.lastModified).toLocaleDateString()}
-                        </span>
+                      <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteProject(project.id);
+                          }}
+                          className='p-1.5 cursor-pointer hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md transition-colors'
+                          title='Delete'>
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
-                    <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteProject(project.id);
-                        }}
-                        className='p-1.5 cursor-pointer hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md transition-colors'
-                        title='Delete'>
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       }>
       {pages.map((id, index) => (
         <div className='w-full group' key={id}>
           <div
             className='relative w-max mx-auto not-last:print:break-after-page'
-            onClick={() => setSelectedBoxId(null)}>
+            onClick={() => setSelectedBoxId(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const marginPx = (margin ?? 5) * (96 / 25.4);
+              const relX = Math.max(0, e.clientX - rect.left - marginPx);
+              const relY = Math.max(0, e.clientY - rect.top - marginPx);
+              setContextMenu({ pageId: id, x: e.clientX, y: e.clientY, relX, relY });
+            }}>
             <A4Page margin={margin ?? 5}>
               {/* Text Boxes for this page */}
               {textBoxes
@@ -610,6 +629,23 @@ function App() {
           </div>
         </div>
       ))}
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className='fixed z-50 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-40 print:hidden'
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}>
+          <button
+            className='w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer'
+            onClick={() => {
+              addTextBox(contextMenu.pageId, Math.max(0, contextMenu.relX - 150), Math.max(0, contextMenu.relY - 100));
+              setContextMenu(null);
+            }}>
+            <Type size={14} />
+            Add Text Box
+          </button>
+        </div>
+      )}
     </Layout>
   );
 }
