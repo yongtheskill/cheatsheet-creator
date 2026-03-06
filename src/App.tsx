@@ -13,6 +13,7 @@ import {
   Image,
   Pencil,
   Check,
+  Contrast,
 } from 'lucide-react';
 import {
   getAllProjects,
@@ -26,6 +27,8 @@ import {
 function App() {
   const [pages, setPages] = useState<string[]>(['page-1']);
   const [margin, setMargin] = useState<number | null>(5);
+  const [blackAndWhite, setBlackAndWhite] = useState<boolean>(false);
+  const [bwImages, setBwImages] = useState<Set<string>>(new Set());
   const [textBoxes, setTextBoxes] = useState<TextBoxData[]>([]);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [imageMap, setImageMap] = useState<Record<string, string>>({});
@@ -47,7 +50,7 @@ function App() {
       return;
     }
     setIsDirty(true);
-  }, [pages, textBoxes, margin, imageMap]);
+  }, [pages, textBoxes, margin, imageMap, blackAndWhite, bwImages]);
 
   // Project Management State
   const [projects, setProjects] = useState<Project[]>([]);
@@ -62,6 +65,8 @@ function App() {
     setIsDirty(false);
     setPages(project.data.pages);
     setMargin(project.data.margin);
+    setBlackAndWhite(project.data.blackAndWhite ?? false);
+    setBwImages(new Set(project.data.bwImages ?? []));
     setTextBoxes(project.data.textBoxes);
     setImageMap(project.data.imageMap || {});
     setCurrentProjectId(project.id);
@@ -163,7 +168,7 @@ function App() {
       id,
       name,
       lastModified: Date.now(),
-      data: { pages, margin, textBoxes, imageMap },
+      data: { pages, margin, blackAndWhite, bwImages: [...bwImages], textBoxes, imageMap },
     };
 
     await upsertProject(project);
@@ -199,6 +204,8 @@ function App() {
     const projectData = {
       pages,
       margin,
+      blackAndWhite,
+      bwImages: [...bwImages],
       textBoxes,
       imageMap,
       exportedAt: new Date().toISOString(),
@@ -246,6 +253,8 @@ function App() {
               data: {
                 pages: projectData.pages,
                 margin: projectData.margin ?? 5,
+                blackAndWhite: projectData.blackAndWhite ?? false,
+                bwImages: projectData.bwImages ?? [],
                 textBoxes: projectData.textBoxes,
                 imageMap: projectData.imageMap || {},
               },
@@ -311,6 +320,8 @@ function App() {
       setIsDirty(false);
       setPages(['page-1']);
       setMargin(5);
+      setBlackAndWhite(false);
+      setBwImages(new Set());
       setTextBoxes([]);
       setImageMap({});
       setCurrentProjectId(null);
@@ -368,6 +379,11 @@ function App() {
       delete updated[imageName];
       return updated;
     });
+    setBwImages((prev) => {
+      const updated = new Set(prev);
+      updated.delete(imageName);
+      return updated;
+    });
   };
 
   return (
@@ -421,6 +437,23 @@ function App() {
             <h2 className='text-xs font-bold text-slate-400 uppercase tracking-wider'>
               Document Settings
             </h2>
+
+            <div className='flex items-center justify-between'>
+              <label className='text-sm font-medium text-slate-600'>Black &amp; White</label>
+              <button
+                role='switch'
+                aria-checked={blackAndWhite}
+                onClick={() => setBlackAndWhite((v) => !v)}
+                className={`relative inline-flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                  blackAndWhite ? 'bg-slate-800' : 'bg-slate-200'
+                }`}>
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                    blackAndWhite ? 'translate-x-4.5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
 
             <div className='space-y-1'>
               <label className='text-sm font-medium text-slate-600'>Page Margin (mm)</label>
@@ -494,13 +527,42 @@ function App() {
                   <div
                     key={name}
                     className='flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg group hover:bg-slate-50'>
-                    <img src={dataUrl} alt={name} className='w-8 h-8 object-cover rounded' />
+                    <img
+                      src={dataUrl}
+                      alt={name}
+                      className='w-8 h-8 object-cover rounded flex-shrink-0'
+                      style={
+                        bwImages.has(name)
+                          ? { filter: 'grayscale(1) brightness(0.7) contrast(100)' }
+                          : undefined
+                      }
+                    />
                     <span className='text-xs text-slate-600 truncate flex-1' title={name}>
                       {name}
                     </span>
                     <button
+                      onClick={() =>
+                        setBwImages((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(name)) {
+                            next.delete(name);
+                          } else {
+                            next.add(name);
+                          }
+                          return next;
+                        })
+                      }
+                      className={`p-1 rounded transition-colors cursor-pointer flex-shrink-0 ${
+                        bwImages.has(name)
+                          ? 'text-slate-700 bg-slate-100 hover:bg-slate-200'
+                          : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100 opacity-0 group-hover:opacity-100'
+                      }`}
+                      title='Toggle black & white'>
+                      <Contrast size={12} />
+                    </button>
+                    <button
                       onClick={() => removeImage(name)}
-                      className='p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100 cursor-pointer'
+                      className='p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100 cursor-pointer flex-shrink-0'
                       title='Remove'>
                       <Trash2 size={12} />
                     </button>
@@ -617,6 +679,8 @@ function App() {
                     onUpdate={updateTextBox}
                     onDelete={deleteTextBox}
                     imageMap={imageMap}
+                    blackAndWhite={blackAndWhite}
+                    bwImages={bwImages}
                   />
                 ))}
 

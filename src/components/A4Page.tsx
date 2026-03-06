@@ -12,7 +12,7 @@ export const A4Page: React.FC<A4PageProps> = ({ children, margin = 5, className 
     <div
       className={clsx(
         'bg-white shadow-2xl shadow-slate-200/50 mx-auto relative overflow-hidden print:shadow-none print:m-0 print:overflow-visible transition-shadow duration-300',
-        className
+        className,
       )}
       style={{
         width: '297mm',

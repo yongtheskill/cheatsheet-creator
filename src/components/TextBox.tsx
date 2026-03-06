@@ -23,6 +23,8 @@ interface TextBoxProps {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   imageMap?: Record<string, string>;
+  blackAndWhite?: boolean;
+  bwImages?: Set<string>;
 }
 
 export const TextBox: React.FC<TextBoxProps> = ({
@@ -32,6 +34,8 @@ export const TextBox: React.FC<TextBoxProps> = ({
   onSelect,
   onDelete,
   imageMap = {},
+  blackAndWhite = false,
+  bwImages,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -125,6 +129,8 @@ export const TextBox: React.FC<TextBoxProps> = ({
                 content={data.content}
                 fontSize={data.fontSize}
                 imageMap={imageMap}
+                blackAndWhite={blackAndWhite}
+                bwImages={bwImages}
               />
             </div>
           )}

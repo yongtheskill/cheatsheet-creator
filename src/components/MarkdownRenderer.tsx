@@ -13,6 +13,8 @@ interface MarkdownRendererProps {
   content: string;
   fontSize?: number;
   imageMap?: Record<string, string>; // Maps image names to data URLs or paths
+  blackAndWhite?: boolean;
+  bwImages?: Set<string>;
 }
 
 // Convert Obsidian-style ![[image.png]] to standard markdown ![image](url)
@@ -39,9 +41,26 @@ const processObsidianImages = (content: string, imageMap: Record<string, string>
   });
 };
 
+const BW_FILTER = 'grayscale(1) brightness(0.6) contrast(100)';
+
 const InnerMarkdown = React.memo(
-  ({ content, imageMap }: { content: string; imageMap: Record<string, string> }) => {
+  ({
+    content,
+    imageMap,
+    blackAndWhite,
+    bwImages,
+  }: {
+    content: string;
+    imageMap: Record<string, string>;
+    blackAndWhite: boolean;
+    bwImages: Set<string>;
+  }) => {
     const processedContent = processObsidianImages(content, imageMap);
+    // Reverse map: data URL → filename, used to check per-image B&W
+    const imageUrlToName = React.useMemo(
+      () => Object.fromEntries(Object.entries(imageMap).map(([k, v]) => [v, k])),
+      [imageMap],
+    );
 
     return (
       <ReactMarkdown
@@ -57,7 +76,8 @@ const InnerMarkdown = React.memo(
                 style={vs}
                 language={match[1]}
                 PreTag='div'
-                className='codeHighlight'>
+                className='codeHighlight'
+                customStyle={blackAndWhite ? { filter: BW_FILTER } : undefined}>
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
             ) : (
@@ -74,6 +94,9 @@ const InnerMarkdown = React.memo(
             const width = widthMatch ? parseInt(widthMatch[1], 10) : undefined;
             const cleanAlt = widthMatch ? '' : alt || '';
 
+            const imageName = imageUrlToName[src];
+            const isBw = imageName !== undefined && bwImages.has(imageName);
+
             return (
               <img
                 src={src}
@@ -82,6 +105,7 @@ const InnerMarkdown = React.memo(
                   maxWidth: '100%',
                   height: 'auto',
                   ...(width && { width: `${width}px` }),
+                  ...(isBw && { filter: BW_FILTER }),
                 }}
                 {...props}
               />
@@ -94,7 +118,8 @@ const InnerMarkdown = React.memo(
               (child: any) =>
                 child?.type === 'img' ||
                 child?.type?.name === 'img' ||
-                (React.isValidElement(child) && (child.type === 'img' || (child.props as any)?.src))
+                (React.isValidElement(child) &&
+                  (child.type === 'img' || (child.props as any)?.src)),
             );
 
             // If multiple images, wrap in flex container
@@ -120,19 +145,29 @@ const InnerMarkdown = React.memo(
     );
   },
   (prevProps, nextProps) =>
-    prevProps.content === nextProps.content && prevProps.imageMap === nextProps.imageMap
+    prevProps.content === nextProps.content &&
+    prevProps.imageMap === nextProps.imageMap &&
+    prevProps.blackAndWhite === nextProps.blackAndWhite &&
+    prevProps.bwImages === nextProps.bwImages,
 );
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   content,
   fontSize = 16,
   imageMap = {},
+  blackAndWhite = false,
+  bwImages = new Set(),
 }) => {
   return (
     <div
       className='w-full h-full overflow-hidden mdContainer'
       style={{ fontSize: `${fontSize}px` }}>
-      <InnerMarkdown content={content} imageMap={imageMap} />
+      <InnerMarkdown
+        content={content}
+        imageMap={imageMap}
+        blackAndWhite={blackAndWhite}
+        bwImages={bwImages}
+      />
     </div>
   );
 };

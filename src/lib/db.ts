@@ -5,6 +5,8 @@ export interface ProjectData {
   margin: number | null;
   textBoxes: TextBoxData[];
   imageMap?: Record<string, string>;
+  blackAndWhite?: boolean;
+  bwImages?: string[];
 }
 
 export interface Project {
